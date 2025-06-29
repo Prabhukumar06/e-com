@@ -35,8 +35,8 @@ public class Main {
         // Use PORT environment variable provided by Render, default to 8080 if not set
         port(Integer.parseInt(System.getenv().getOrDefault("PORT", "8080")));
         
-        // Configure static files to be served from the frontend directory
-        staticFiles.externalLocation(System.getProperty("user.dir") + "/frontend");
+        // Configure static files to be served from the frontend directory in resources
+        staticFiles.location("/public");
         
         // Add root route to serve index.html
         get("/", (req, res) -> {

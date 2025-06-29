@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">E-Commerce</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/cart.html">Cart (<span id="cart-count">0</span>)</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h2>Shopping Cart</h2>
+    <div id="cart-items" class="mb-4">
+        <!-- Cart items will be loaded here by JavaScript -->
+    </div>
+    <hr>
+    <div class="d-flex justify-content-between align-items-center">
+        <h4>Total: $<span id="cart-total">0.00</span></h4>
+        <div>
+            <a href="/" class="btn btn-secondary">Continue Shopping</a>
+            <a href="/checkout.html" id="checkout-btn" class="btn btn-success ms-2">Checkout</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    let csrfToken = '';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fetch CSRF token first
+        fetch('/csrf-token')
+            .then(response => response.json())
+            .then(data => {
+                csrfToken = data.token;
+                loadCart();
+            })
+            .catch(error => {
+                console.error('Error fetching CSRF token:', error);
+            });
+    });
+
+    function loadCart() {
+        fetch('/cart')
+            .then(response => response.json())
+            .then(cart => {
+                const cartItems = document.getElementById('cart-items');
+                const cartTotal = document.getElementById('cart-total');
+                const cartCount = document.getElementById('cart-count');
+                const checkoutBtn = document.getElementById('checkout-btn');
+                let total = 0;
+                let itemCount = 0;
+
+                if (cart.length === 0) {
+                    cartItems.innerHTML = '<p>Your cart is empty.</p>';
+                    checkoutBtn.classList.add('disabled');
+                } else {
+                    cartItems.innerHTML = '';
+                    cart.forEach(item => {
+                        const product = item.product;
+                        const quantity = item.quantity;
+                        const subtotal = item.subtotal;
+                        
+                        const cartItem = `
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            <img src="${product.imageUrl}" class="img-fluid rounded" alt="${product.name}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h5 class="card-title">${product.name}</h5>
+                                            <p class="card-text text-muted">${product.description}</p>
+                                        </div>
+                                        <div class="col-md-2">
+                                            $${product.price.toFixed(2)}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group">
+                                                <button class="btn btn-outline-secondary" onclick="updateQuantity(${product.id}, ${quantity - 1})">-</button>
+                                                <input type="number" class="form-control text-center" value="${quantity}" 
+                                                    onchange="updateQuantity(${product.id}, this.value)" min="1">
+                                                <button class="btn btn-outline-secondary" onclick="updateQuantity(${product.id}, ${quantity + 1})">+</button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            $${subtotal.toFixed(2)}
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button class="btn btn-danger" onclick="removeItem(${product.id})">
+                                                <i class="bi bi-trash"></i> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        cartItems.innerHTML += cartItem;
+                        total += subtotal;
+                        itemCount += quantity;
+                    });
+                    checkoutBtn.classList.remove('disabled');
+                }
+                
+                cartTotal.textContent = total.toFixed(2);
+                cartCount.textContent = itemCount;
+            });
+    }
+
+    function updateQuantity(productId, newQuantity) {
+        if (newQuantity < 1) return;
+        
+        fetch(`/cart/update/${productId}?quantity=${newQuantity}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(cart => {
+            loadCart();
+        })
+        .catch(error => {
+            console.error('Error updating quantity:', error);
+            alert('Failed to update quantity');
+        });
+    }
+
+    function removeItem(productId) {
+        fetch(`/cart/remove/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(cart => {
+            loadCart();
+        })
+        .catch(error => {
+            console.error('Error removing item:', error);
+            alert('Failed to remove item');
+        });
+    }
+</script>
+
+</body>
+</html>

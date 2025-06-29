@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">E-Commerce</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Checkout</h2>
+            <form id="checkout-form" action="/checkout" method="POST" class="needs-validation" novalidate>
+                <input type="hidden" name="csrf_token" id="csrf-token">
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required
+                           pattern="^[a-zA-Z ]{2,50}$">
+                    <div class="invalid-feedback">
+                        Please enter a valid name (2-50 characters, letters only)
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                    <div class="invalid-feedback">
+                        Please enter a valid email address
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           pattern="^\+?[1-9][0-9]{7,14}$">
+                    <div class="invalid-feedback">
+                        Please enter a valid phone number
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="address" class="form-label">Shipping Address</label>
+                    <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                    <div class="invalid-feedback">
+                        Please enter your shipping address
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="place-order-btn">Place Order</button>
+                <a href="/cart.html" class="btn btn-secondary">Back to Cart</a>
+            </form>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Order Summary</h3>
+                    <div id="order-items">
+                        <!-- Order items will be loaded here -->
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total:</strong>
+                        <span id="order-total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fetch CSRF token first
+        fetch('/csrf-token')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('csrf-token').value = data.token;
+                loadOrderSummary();
+                setupFormValidation();
+            })
+            .catch(error => {
+                console.error('Error fetching CSRF token:', error);
+            });
+    });
+
+    function loadOrderSummary() {
+        fetch('/cart')
+            .then(response => response.json())
+            .then(cart => {
+                if (cart.length === 0) {
+                    window.location.href = '/cart.html';
+                    return;
+                }
+
+                const orderItems = document.getElementById('order-items');
+                let total = 0;
+
+                cart.forEach(item => {
+                    const product = item.product;
+                    const quantity = item.quantity;
+                    const subtotal = item.subtotal;
+                    
+                    const itemHtml = `
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>${product.name} × ${quantity}</span>
+                                <span>$${subtotal.toFixed(2)}</span>
+                            </div>
+                            <small class="text-muted">$${product.price.toFixed(2)} each</small>
+                        </div>
+                    `;
+                    orderItems.innerHTML += itemHtml;
+                    total += subtotal;
+                });
+
+                document.getElementById('order-total').textContent = `$${total.toFixed(2)}`;
+            });
+    }
+
+    function setupFormValidation() {
+        const form = document.getElementById('checkout-form');
+        
+        form.addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent default form submission
+            
+            if (!form.checkValidity()) {
+                event.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            // Get form data and convert to URL-encoded format
+            const formData = new FormData(form);
+            const csrfToken = document.getElementById('csrf-token').value;
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            // Submit form data with CSRF token in header
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: new URLSearchParams(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/confirmation.html';
+                } else {
+                    throw new Error('Checkout failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to process checkout. Please try again.');
+            });
+        });
+
+        // Real-time validation
+        const inputs = form.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('input', function () {
+                if (this.checkValidity()) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
