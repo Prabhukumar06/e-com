@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gemini-cli
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
