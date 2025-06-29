@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy the project files
 COPY . .
 
-# Build the application
-RUN ./mvnw package
+# Make mvnw executable and build the application
+RUN chmod +x mvnw && ./mvnw package
 
 # Expose port 8080
 EXPOSE 8080
