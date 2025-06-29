@@ -4,16 +4,15 @@ FROM openjdk:8-jdk-slim
 # Set working directory
 WORKDIR /app
 
-# Install curl
-RUN apt-get update && apt-get install -y curl
+# Install Maven and curl
+RUN apt-get update && apt-get install -y curl maven
 
 # Copy the project files
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
+COPY pom.xml ./
 COPY src ./src
 
-# Make mvnw executable and build the application
-RUN chmod +x mvnw && ./mvnw package
+# Build the application
+RUN mvn package
 
 # Expose port 8080
 EXPOSE 8080
