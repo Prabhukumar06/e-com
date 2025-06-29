@@ -4,8 +4,13 @@ FROM openjdk:8-jdk-slim
 # Set working directory
 WORKDIR /app
 
+# Install curl
+RUN apt-get update && apt-get install -y curl
+
 # Copy the project files
-COPY . .
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+COPY src ./src
 
 # Make mvnw executable and build the application
 RUN chmod +x mvnw && ./mvnw package
